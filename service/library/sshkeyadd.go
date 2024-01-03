@@ -50,24 +50,15 @@ func SshKeyAdd(c Config, key string) error {
 				Container.HostConfig.Binds = append(Container.HostConfig.Binds, fmt.Sprintf("%v:%v", key, key))
 			}
 
-			if e := Container.Create(); e != nil {
-				return e
+			if err := Container.Create(); err != nil {
+				_ = Container.Remove()
+				return err
 			}
-			if e := Container.Start(); e != nil {
-				return e
+			if err := Container.Start(); err != nil {
+				_ = Container.Remove()
+				return err
 			}
-			l, _ := Container.DockerLogs()
 			_ = Container.Remove()
-
-			// We need tighter control on the output of this container...
-			for _, line := range strings.Split(string(l), "\n") {
-				if strings.Contains(line, "Identity added:") {
-					color.Print(aurora.Green(fmt.Sprintf("Successfully added SSH key %v to agent\n", key)))
-				}
-				if strings.Contains(line, "Enter passphrase for") {
-					color.Print(aurora.Yellow("Warning: Passphrase protected SSH keys are not currently supported, the key will not be added.\n"))
-				}
-			}
 
 		}
 
